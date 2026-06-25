@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+from urllib.parse import quote
 
 from dotenv import load_dotenv
 from twilio.rest import Client
@@ -11,6 +12,13 @@ _TO_NUMBER = "+18054398008"
 
 
 def place_call(scenario_id: str = "01_simple_scheduling") -> str:
+    from src.scenarios import get_scenario
+    try:
+        get_scenario(scenario_id)
+    except ValueError as exc:
+        print(f"[trigger] ERROR: {exc}", flush=True)
+        sys.exit(1)
+
     account_sid = os.getenv("TWILIO_ACCOUNT_SID")
     auth_token = os.getenv("TWILIO_AUTH_TOKEN")
     from_number = os.getenv("TWILIO_FROM_NUMBER")
@@ -34,7 +42,7 @@ def place_call(scenario_id: str = "01_simple_scheduling") -> str:
     call = client.calls.create(
         to=_TO_NUMBER,
         from_=from_number,
-        url=f"{public_base_url}/twiml?scenario={scenario_id}",
+        url=f"{public_base_url}/twiml?scenario={quote(scenario_id, safe='')}",
         record=True,
         recording_channels="dual",
     )

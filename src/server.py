@@ -1,8 +1,11 @@
+import html
 import os
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, WebSocket
+from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.responses import Response
+
+from src.scenarios import get_scenario
 
 load_dotenv()
 
@@ -19,13 +22,18 @@ def _ws_base_url() -> str:
 @app.post("/twiml")
 async def twiml_webhook(request: Request):
     scenario_id = request.query_params.get("scenario", "01_simple_scheduling")
+    try:
+        get_scenario(scenario_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     ws_url = _ws_base_url()
+    safe_id = html.escape(scenario_id, quote=True)
     twiml = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         "<Response>"
         "<Connect>"
         f'<Stream url="{ws_url}/media">'
-        f'<Parameter name="scenario" value="{scenario_id}"/>'
+        f'<Parameter name="scenario" value="{safe_id}"/>'
         "</Stream>"
         "</Connect>"
         "</Response>"

@@ -29,3 +29,14 @@ def test_twiml_embeds_scenario_parameter():
     assert response.status_code == 200
     body = response.text
     assert '<Parameter name="scenario" value="01_simple_scheduling"' in body
+
+
+def test_twiml_returns_422_for_unknown_scenario():
+    response = client.post("/twiml?scenario=99_nonexistent")
+    assert response.status_code == 422
+
+
+def test_twiml_returns_valid_xml_with_default_scenario():
+    response = client.post("/twiml")
+    assert response.status_code == 200
+    assert '<Parameter name="scenario" value="01_simple_scheduling"' in response.text
