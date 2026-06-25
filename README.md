@@ -57,3 +57,25 @@ python -m src.trigger
 ```
 
 This calls +1-805-439-8008 from `TWILIO_FROM_NUMBER`, records both channels (dual-channel), and prints the Call SID. Find the recording at console.twilio.com → Monitor → Calls → Recordings.
+
+## Patient persona
+
+The AI patient is Alex Rivera, a 34-year-old booking a general check-up. The persona prompt lives in `prompts/patient.txt` and is loaded into the Azure gpt-realtime session at call start.
+
+## Full validation workflow
+
+1. Fill in `.env` with your credentials.
+2. Start ngrok in a terminal:
+   ```
+   ngrok http 8000
+   ```
+3. Copy the `https://` URL from ngrok into `.env` as `PUBLIC_BASE_URL`.
+4. Start the server (with venv active) in another terminal:
+   ```
+   uvicorn src.server:app --host 0.0.0.0 --port 8000
+   ```
+5. Place the call in a third terminal (with venv active):
+   ```
+   python -m src.trigger
+   ```
+6. Listen to the dual-channel recording at console.twilio.com → Monitor → Calls → Recordings.
