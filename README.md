@@ -47,3 +47,13 @@ Key design decisions:
 - **g711_ulaw end-to-end:** Twilio sends 8kHz mu-law audio; Azure is configured to accept and emit the same format. No resampling, no codec conversion.
 - **Barge-in:** Azure's server-side VAD detects when the human speaks mid-response. When it does, `input_audio_buffer.speech_started` fires and the bridge immediately sends Twilio a `clear` event to cut playback.
 - **Session config** (voice, turn detection, patient prompt) is defined in `_build_session_config()` — one place to tune all session parameters.
+
+## Placing a call
+
+With the server running and ngrok active:
+
+```
+python -m src.trigger
+```
+
+This calls +1-805-439-8008 from `TWILIO_FROM_NUMBER`, records both channels (dual-channel), and prints the Call SID. Find the recording at console.twilio.com → Monitor → Calls → Recordings.
