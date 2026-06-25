@@ -1,0 +1,33 @@
+# Secrets
+.env
+.env.*
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Media
+recordings/
+audio/
+transcripts/
+*.mp3
+*.ogg
+*.wav
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude / Superpowers
+.claude/
+CLAUDE.md
+.superpowers/
+docs/superpowers/
+*.plan.md
+
+# ngrok
+ngrok.yml
+*.authtoken
