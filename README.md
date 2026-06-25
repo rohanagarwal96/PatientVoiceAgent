@@ -24,3 +24,17 @@ Repo scaffolded. Server, audio bridge, and call trigger are in progress.
    venv\Scripts\activate    # Windows
    pip install -r requirements.txt
    ```
+
+## Running the server
+
+With venv active, from the project root:
+
+```
+uvicorn src.server:app --host 0.0.0.0 --port 8000
+```
+
+Endpoints:
+- `POST /twiml` — Twilio calls this webhook; returns TwiML opening a media stream to `/media`
+- `WS /media` — Twilio connects here to stream audio
+
+Set `PUBLIC_BASE_URL` in `.env` to your ngrok https URL before starting.
