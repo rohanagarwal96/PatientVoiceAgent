@@ -58,6 +58,17 @@ python -m src.trigger
 
 This calls +1-805-439-8008 from `TWILIO_FROM_NUMBER`, records both channels (dual-channel), and prints the Call SID. Find the recording at console.twilio.com → Monitor → Calls → Recordings.
 
+## Scenario engine
+
+Scenarios are defined in `src/scenarios.py`. Each scenario is a Pydantic `Scenario` object with `id`, `name`, `persona`, `goal`, `trap`, `opening_hint`, and `system_prompt` fields.
+
+To place a call with a specific scenario:
+```
+python -m src.trigger --scenario 01_simple_scheduling
+```
+
+The scenario ID flows: `trigger.py` → `?scenario=` query param → `server.py` embeds it as a `<Parameter>` in the Twilio `<Stream>` → `bridge.py` reads it from `start.customParameters` → injects the scenario's `system_prompt` into the Azure gpt-realtime session.
+
 ## Patient persona
 
 The AI patient is Alex Rivera, a 34-year-old booking a general check-up. The persona prompt lives in `prompts/patient.txt` and is loaded into the Azure gpt-realtime session at call start.

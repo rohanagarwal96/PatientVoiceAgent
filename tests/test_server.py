@@ -22,3 +22,10 @@ def test_twiml_returns_xml_with_stream_url():
     body = response.text
     assert "<Stream" in body
     assert "wss://abc123.ngrok.io/media" in body
+
+
+def test_twiml_embeds_scenario_parameter():
+    response = client.post("/twiml?scenario=01_simple_scheduling")
+    assert response.status_code == 200
+    body = response.text
+    assert '<Parameter name="scenario" value="01_simple_scheduling"' in body

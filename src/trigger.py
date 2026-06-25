@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 
@@ -9,7 +10,7 @@ load_dotenv()
 _TO_NUMBER = "+18054398008"
 
 
-def place_call() -> str:
+def place_call(scenario_id: str = "01_simple_scheduling") -> str:
     account_sid = os.getenv("TWILIO_ACCOUNT_SID")
     auth_token = os.getenv("TWILIO_AUTH_TOKEN")
     from_number = os.getenv("TWILIO_FROM_NUMBER")
@@ -33,7 +34,7 @@ def place_call() -> str:
     call = client.calls.create(
         to=_TO_NUMBER,
         from_=from_number,
-        url=f"{public_base_url}/twiml",
+        url=f"{public_base_url}/twiml?scenario={scenario_id}",
         record=True,
         recording_channels="dual",
     )
@@ -42,4 +43,7 @@ def place_call() -> str:
 
 
 if __name__ == "__main__":
-    place_call()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--scenario", default="01_simple_scheduling")
+    args = parser.parse_args()
+    place_call(args.scenario)
