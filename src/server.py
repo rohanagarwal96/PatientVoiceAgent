@@ -11,6 +11,8 @@ app = FastAPI()
 
 def _ws_base_url() -> str:
     base = os.getenv("PUBLIC_BASE_URL", "").rstrip("/")
+    if not base:
+        raise RuntimeError("PUBLIC_BASE_URL is not set")
     return base.replace("https://", "wss://").replace("http://", "ws://")
 
 
