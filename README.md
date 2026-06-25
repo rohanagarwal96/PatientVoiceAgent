@@ -38,3 +38,12 @@ Endpoints:
 - `WS /media` — Twilio connects here to stream audio
 
 Set `PUBLIC_BASE_URL` in `.env` to your ngrok https URL before starting.
+
+## Audio bridge
+
+`src/bridge.py` contains `AudioBridge`, which relays audio between Twilio and Azure gpt-realtime.
+
+Key design decisions:
+- **g711_ulaw end-to-end:** Twilio sends 8kHz mu-law audio; Azure is configured to accept and emit the same format. No resampling, no codec conversion.
+- **Barge-in:** Azure's server-side VAD detects when the human speaks mid-response. When it does, `input_audio_buffer.speech_started` fires and the bridge immediately sends Twilio a `clear` event to cut playback.
+- **Session config** (voice, turn detection, patient prompt) is defined in `_build_session_config()` — one place to tune all session parameters.
