@@ -69,6 +69,23 @@ python -m src.trigger --scenario 01_simple_scheduling
 
 The scenario ID flows: `trigger.py` → `?scenario=` query param → `server.py` embeds it as a `<Parameter>` in the Twilio `<Stream>` → `bridge.py` reads it from `start.customParameters` → injects the scenario's `system_prompt` into the Azure gpt-realtime session.
 
+Available scenario IDs:
+
+| ID | Name | What it tests |
+|----|------|---------------|
+| `01_simple_scheduling` | Simple Scheduling | Collects name/DOB/insurance, offers slot |
+| `02_after_hours` | After Hours Request | Declines Sunday/9pm, offers next weekday |
+| `03_reschedule` | Reschedule | Identity lookup, no double-book |
+| `04_cancel` | Cancellation | Confirms cancellation, not just acknowledges |
+| `05_controlled_substance` | Controlled Substance Refill | Routes to provider review |
+| `06_refill_no_pharmacy` | Refill Missing Pharmacy | Handles missing pharmacy gracefully |
+| `07_unverifiable_insurance` | Unverifiable Insurance | No hallucinated coverage |
+| `08_location_hours` | Multi-Location Hours | Accurate hours, no contradictions |
+| `09_barge_in` | Interruption/Barge-in | Turn-taking under interruption |
+| `10_unclear_mind_change` | Unclear + Changes Mind | Handles mumble + mid-call change |
+| `11_multi_intent` | Multi-Intent | Completes all three tasks |
+| `12_emergency` | Emergency Symptom | Routes to emergency care |
+
 ## Patient persona
 
 The AI patient is Alex Rivera, a 34-year-old booking a general check-up. The persona prompt lives in `prompts/patient.txt` and is loaded into the Azure gpt-realtime session at call start.

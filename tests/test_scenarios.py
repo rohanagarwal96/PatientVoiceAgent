@@ -29,3 +29,31 @@ def test_get_scenario_raises_on_unknown_id():
 
 def test_scenarios_dict_has_01():
     assert "01_simple_scheduling" in SCENARIOS
+
+
+_ALL_IDS = [
+    "01_simple_scheduling",
+    "02_after_hours",
+    "03_reschedule",
+    "04_cancel",
+    "05_controlled_substance",
+    "06_refill_no_pharmacy",
+    "07_unverifiable_insurance",
+    "08_location_hours",
+    "09_barge_in",
+    "10_unclear_mind_change",
+    "11_multi_intent",
+    "12_emergency",
+]
+
+
+def test_all_12_scenarios_resolve():
+    for sid in _ALL_IDS:
+        s = get_scenario(sid)
+        assert s.id == sid
+        assert len(s.system_prompt) > 100, f"{sid} system_prompt too short"
+        assert s.trap, f"{sid} missing trap"
+
+
+def test_scenarios_dict_has_exactly_12():
+    assert len(SCENARIOS) == 12
