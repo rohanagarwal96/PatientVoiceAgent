@@ -103,6 +103,27 @@ python -m src.recorder --backfill --limit 10
 
 Note: `recordings/` is gitignored.
 
+## Transcription
+
+Transcribe a recording with speaker attribution:
+
+```
+python -m src.transcriber --recording recordings/01_simple_scheduling_20260625_120000_CAabc.mp3
+```
+
+Or transcribe all untranscribed recordings:
+```
+python -m src.transcriber --all
+```
+
+Uses Whisper `small` model. Splits the dual-channel mp3 into two mono wav files (channel 0 = PATIENT, channel 1 = AGENT), transcribes each independently, merges segments by timestamp.
+
+Output in `transcripts/`:
+- `.txt` — human-readable with `[MM:SS] SPEAKER: text` format
+- `.json` — structured array with `speaker`, `start`, `end`, `text` fields
+
+Note: `transcripts/` is gitignored.
+
 ## Patient persona
 
 The AI patient is Alex Rivera, a 34-year-old booking a general check-up. The persona prompt lives in `prompts/patient.txt` and is loaded into the Azure gpt-realtime session at call start.
