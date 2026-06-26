@@ -62,16 +62,26 @@ def backfill(limit: int = 10) -> list[Path]:
     auth_token = os.getenv("TWILIO_AUTH_TOKEN")
     client = Client(account_sid, auth_token)
 
+    _RECORDINGS_DIR.mkdir(exist_ok=True)
     results = []
     for rec in client.recordings.list(limit=limit):
         call_sid = rec.call_sid
+
+        # Skip if already downloaded (any file ending in _{call_sid}.mp3)
+        if list(_RECORDINGS_DIR.glob(f"*_{call_sid}.mp3")):
+            print(f"[recorder] skipping {call_sid} (already downloaded)", flush=True)
+            continue
+
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        _RECORDINGS_DIR.mkdir(exist_ok=True)
         out_path = _RECORDINGS_DIR / f"backfill_{ts}_{call_sid}.mp3"
 
         media_url = f"https://api.twilio.com{rec.uri.replace('.json', '.wav')}"
-        resp = requests.get(media_url, auth=(account_sid, auth_token))
-        resp.raise_for_status()
+        try:
+            resp = requests.get(media_url, auth=(account_sid, auth_token))
+            resp.raise_for_status()
+        except Exception as exc:
+            print(f"[recorder] download failed for {call_sid}: {exc}", flush=True)
+            continue
 
         proc = subprocess.run(
             ["ffmpeg", "-i", "pipe:0", "-ac", "2", "-ar", "44100", "-q:a", "2", str(out_path)],
