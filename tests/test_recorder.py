@@ -38,6 +38,7 @@ def test_fetch_recording_names_file_correctly(tmp_path):
         patch("src.recorder.Client") as mock_client_class,
         patch("src.recorder.requests") as mock_requests,
         patch("src.recorder.subprocess.run") as mock_run,
+        patch("src.recorder.shutil.which", return_value="/usr/bin/ffmpeg"),
         patch("src.recorder._RECORDINGS_DIR", tmp_path),
     ):
         mock_client_class.return_value = _make_client_mock(call_status="completed", recordings=[mock_rec])

@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 import subprocess
 import time
 from datetime import datetime
@@ -62,6 +63,9 @@ def fetch_recording(call_sid: str, scenario_id: str) -> Path:
     print(f"[recorder] downloading {media_url}", flush=True)
     resp = requests.get(media_url, auth=(account_sid, auth_token))
     resp.raise_for_status()
+
+    if not shutil.which("ffmpeg"):
+        raise RuntimeError("ffmpeg not found in PATH. Open a new terminal to refresh PATH, then re-run.")
 
     proc = subprocess.run(
         ["ffmpeg", "-i", "pipe:0", "-ac", "2", "-ar", "44100", "-q:a", "2", str(out_path)],
