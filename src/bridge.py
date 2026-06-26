@@ -71,7 +71,7 @@ class AudioBridge:
                 pass
 
     async def _configure_session(self, scenario: Scenario) -> None:
-        await self._azure_ws.send(json.dumps(_build_session_config(scenario.system_prompt)))
+        await self._azure_ws.send(json.dumps(_build_session_config(scenario.get_system_prompt())))
         print(f"[bridge] session configured scenario={scenario.id}", flush=True)
 
     async def _relay_twilio_to_azure(self) -> None:

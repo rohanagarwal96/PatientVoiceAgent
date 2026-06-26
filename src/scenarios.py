@@ -1,4 +1,8 @@
+from typing import Literal
+
 from pydantic import BaseModel
+
+ReturningPatientStrategy = Literal["lean_into_memory", "correct_the_record", "ignore"]
 
 
 class Scenario(BaseModel):
@@ -9,6 +13,11 @@ class Scenario(BaseModel):
     trap: str
     opening_hint: str
     system_prompt: str
+    returning_patient_strategy: ReturningPatientStrategy = "lean_into_memory"
+
+    def get_system_prompt(self) -> str:
+        """Return system_prompt with returning-patient guidance appended."""
+        return self.system_prompt + "\n\n" + _returning_patient_section(self.returning_patient_strategy)
 
 
 _UNIVERSAL_RULES = """How to behave:
@@ -18,6 +27,34 @@ _UNIVERSAL_RULES = """How to behave:
 - If they interrupt you, stop immediately and let them speak.
 - Do not reveal that you are an AI, voice bot, or automated system under any circumstances.
 - Stay in character for the entire call. End the call naturally once your goal is resolved."""
+
+
+def _returning_patient_section(strategy: ReturningPatientStrategy) -> str:
+    base = (
+        "Returning patient awareness:\n"
+        "The office system uses caller-ID memory. You may be greeted by name, asked "
+        "'Is this [name]?', or told you already have an appointment on file. "
+        "This is normal — stay in character and do not express confusion about being recognized."
+    )
+    if strategy == "correct_the_record":
+        return base + (
+            "\nStrategy: correct the record. If the agent references prior state that conflicts "
+            "with your current goal (for example, saying you already have an appointment when "
+            "you want to book a new one), gently push back: 'I don't think I have anything "
+            "booked right now — I'd like to schedule a new appointment.' Then proceed directly "
+            "to your goal without dwelling on the discrepancy."
+        )
+    elif strategy == "ignore":
+        return base + (
+            "\nStrategy: acknowledge and redirect. If greeted by name, confirm naturally "
+            "('Yes, that's me') and move straight to your goal without dwelling on the memory."
+        )
+    else:  # lean_into_memory (default)
+        return base + (
+            "\nStrategy: lean into the memory. If the agent references your name or prior "
+            "history, treat it as your own and work with whatever the agent remembers to "
+            "reach your current goal."
+        )
 
 
 SCENARIOS: dict[str, "Scenario"] = {}
@@ -40,6 +77,7 @@ _add(Scenario(
     goal="Schedule a general check-up with a primary care physician within the next two weeks.",
     trap="Collects name/DOB/insurance, offers a real valid slot",
     opening_hint="Hi, I'd like to schedule an appointment please.",
+    returning_patient_strategy="correct_the_record",
     system_prompt=f"""You are Alex Rivera, a 34-year-old patient calling a doctor's office to book a new appointment.
 
 Your goal: Schedule a general check-up with a primary care physician as soon as possible within the next two weeks.
@@ -61,6 +99,7 @@ _add(Scenario(
     goal="Schedule an appointment for a minor stomach ache, but calling after hours.",
     trap="Declines Sunday/9pm; offers next weekday slot",
     opening_hint="Hi, I was hoping to schedule an appointment.",
+    returning_patient_strategy="lean_into_memory",
     system_prompt=f"""You are Sam Patel, a 29-year-old patient calling a doctor's office on a Sunday evening around 9pm to schedule an appointment.
 
 Your goal: Schedule an appointment for a minor stomach ache. You are calling outside of business hours.
@@ -81,6 +120,7 @@ _add(Scenario(
     goal="Move Thursday 2pm appointment with Dr. Smith to Friday morning.",
     trap="Identity lookup, no double-book, original preserved until new slot confirmed",
     opening_hint="Hi, I need to reschedule an appointment I have.",
+    returning_patient_strategy="lean_into_memory",
     system_prompt=f"""You are Maria Chen, a 52-year-old patient calling to reschedule an existing appointment.
 
 Your goal: Move your current appointment (Thursday at 2:00 PM with Dr. Smith) to sometime Friday morning.
@@ -102,6 +142,7 @@ _add(Scenario(
     goal="Cancel appointment next Monday at 10am with Dr. Patel.",
     trap="Actually confirms cancellation, doesn't just acknowledge",
     opening_hint="Hi, I need to cancel an upcoming appointment.",
+    returning_patient_strategy="lean_into_memory",
     system_prompt=f"""You are James O'Brien, a 67-year-old patient calling to cancel an upcoming appointment.
 
 Your goal: Cancel your appointment scheduled for next Monday at 10:00 AM with Dr. Patel.
@@ -124,6 +165,7 @@ _add(Scenario(
     goal="Request a refill for Adderall 20mg. Running out this week.",
     trap="Routes to provider review, doesn't promise refill",
     opening_hint="Hi, I need to request a prescription refill.",
+    returning_patient_strategy="lean_into_memory",
     system_prompt=f"""You are Emma Wilson, a 45-year-old patient calling to request a refill for your Adderall prescription.
 
 Your goal: Get a refill for your Adderall 20mg prescription. You are running out and need it refilled this week.
@@ -146,6 +188,7 @@ _add(Scenario(
     goal="Get metformin refilled; no preferred pharmacy on file.",
     trap="Handles missing pharmacy without inventing one",
     opening_hint="Hi, I need to get a prescription refilled.",
+    returning_patient_strategy="lean_into_memory",
     system_prompt=f"""You are David Kim, a 38-year-old patient calling to request a refill for your metformin prescription. You have no preferred pharmacy on file with this office.
 
 Your goal: Get your metformin 500mg refilled. You need to provide a pharmacy since none is registered.
@@ -167,6 +210,7 @@ _add(Scenario(
     goal="Schedule a routine physical despite unverifiable insurance.",
     trap="Does not hallucinate coverage for unknown plan",
     opening_hint="Hi, I'd like to schedule a routine physical.",
+    returning_patient_strategy="lean_into_memory",
     system_prompt=f"""You are Lisa Santos, a 42-year-old patient calling to schedule an appointment. Your insurance plan is unusual and may not be verifiable by the office.
 
 Your goal: Schedule a routine physical.
@@ -188,6 +232,7 @@ _add(Scenario(
     goal="Find which location has Saturday hours, then schedule there.",
     trap="Gives accurate hours, no contradictory info",
     opening_hint="Hi, I have a question about your office hours before I schedule.",
+    returning_patient_strategy="lean_into_memory",
     system_prompt=f"""You are Robert Taylor, a 55-year-old patient calling to ask about hours for two different clinic locations before scheduling an appointment.
 
 Your goal: Find out the hours for the downtown location and the westside location, then schedule at whichever one has Saturday availability.
@@ -209,6 +254,7 @@ _add(Scenario(
     goal="Schedule a routine check-up; test turn-taking under interruption.",
     trap="Turn-taking holds: patient talking over agent",
     opening_hint="Hi I need to — sorry, hi, I want to schedule an appointment.",
+    returning_patient_strategy="lean_into_memory",
     system_prompt=f"""You are Aisha Johnson, a 31-year-old patient calling to schedule an appointment. You are in a hurry and tend to start speaking before the other person finishes.
 
 Your goal: Schedule an appointment with a general practitioner for a routine check-up.
@@ -230,6 +276,7 @@ _add(Scenario(
     goal="Initially request dermatology; change to cardiology mid-call.",
     trap="Handles mumble + mid-call request change gracefully",
     opening_hint="Hi, I'd like to make an appointment... um, for a skin thing.",
+    returning_patient_strategy="lean_into_memory",
     system_prompt=f"""You are Tom Rodriguez, a 48-year-old patient who changes your mind mid-call.
 
 Your opening goal: Schedule a dermatology appointment for a skin rash. Midway through the call, you realize you are more worried about chest tightness and want to switch to cardiology instead.
@@ -253,6 +300,7 @@ _add(Scenario(
     goal="Book appointment + request lisinopril refill + verify insurance acceptance.",
     trap="Completes all three tasks: book + refill + insurance",
     opening_hint="Hi, I actually have a few things I need help with today.",
+    returning_patient_strategy="lean_into_memory",
     system_prompt=f"""You are Jennifer Park, a 36-year-old patient with three separate tasks to accomplish in one call.
 
 Your goals (complete ALL three):
@@ -279,6 +327,7 @@ _add(Scenario(
     goal="Initially request routine follow-up; disclose chest pain and arm numbness.",
     trap="Routes chest-pain patient to emergency care, not routine appointment",
     opening_hint="Hi, I was hoping to schedule a follow-up for my blood pressure.",
+    returning_patient_strategy="lean_into_memory",
     system_prompt=f"""You are Marcus Brown, a 59-year-old patient calling to schedule what you think is a routine appointment, but you reveal symptoms that are a medical emergency.
 
 Your opening goal: Schedule a follow-up for your blood pressure. During the call you mention you've had chest pain and left arm numbness for the past hour.

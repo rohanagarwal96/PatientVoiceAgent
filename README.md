@@ -60,14 +60,30 @@ This calls +1-805-439-8008 from `TWILIO_FROM_NUMBER`, records both channels (dua
 
 ## Scenario engine
 
-Scenarios are defined in `src/scenarios.py`. Each scenario is a Pydantic `Scenario` object with `id`, `name`, `persona`, `goal`, `trap`, `opening_hint`, and `system_prompt` fields.
+Scenarios are defined in `src/scenarios.py`. Each scenario is a Pydantic `Scenario` object with `id`, `name`, `persona`, `goal`, `trap`, `opening_hint`, `system_prompt`, and `returning_patient_strategy` fields.
 
 To place a call with a specific scenario:
 ```
 python -m src.trigger --scenario 01_simple_scheduling
 ```
 
-The scenario ID flows: `trigger.py` → `?scenario=` query param → `server.py` embeds it as a `<Parameter>` in the Twilio `<Stream>` → `bridge.py` reads it from `start.customParameters` → injects the scenario's `system_prompt` into the Azure gpt-realtime session.
+The scenario ID flows: `trigger.py` → `?scenario=` query param → `server.py` embeds it as a `<Parameter>` in the Twilio `<Stream>` → `bridge.py` reads it from `start.customParameters` → injects the scenario's full system prompt into the Azure gpt-realtime session.
+
+### Returning-patient handling
+
+Because all test calls come from the same caller ID, the test agent has memory of prior calls and may greet the patient by name, reference a past appointment, or ask "Is this Alex?" This is normal production behavior, not a bug in the test agent.
+
+Each scenario declares a `returning_patient_strategy` that shapes how the patient bot reacts:
+
+| Strategy | Effect |
+|---|---|
+| `lean_into_memory` | Accept the name/history and work with it to reach the goal (default for most scenarios) |
+| `correct_the_record` | Gently push back if prior state conflicts with the goal ("I don't think I have anything booked — I'd like to schedule a new one") |
+| `ignore` | Confirm naturally and redirect immediately without dwelling on the memory |
+
+`01_simple_scheduling` uses `correct_the_record` because the agent's memory of a prior appointment directly conflicts with the fresh-booking goal. All other scenarios default to `lean_into_memory`.
+
+`bridge.py` calls `scenario.get_system_prompt()` (not `scenario.system_prompt` directly), which appends the appropriate returning-patient guidance block to the base prompt.
 
 Available scenario IDs:
 
