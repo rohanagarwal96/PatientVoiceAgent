@@ -124,6 +124,38 @@ Output in `transcripts/`:
 
 Note: `transcripts/` is gitignored.
 
+## Bug evaluator
+
+After transcribing a call, run the evaluator to find and review potential bugs:
+
+```
+python -m src.evaluator --transcript transcripts/05_controlled_substance_20260625_120000_CAabc.json --scenario 05_controlled_substance
+```
+
+The evaluator:
+1. Reads the transcript and the scenario's known trap condition.
+2. Calls Azure OpenAI (deployment: `AZURE_OPENAI_EVAL_DEPLOYMENT`) for candidate findings.
+3. Presents each finding with a `[k]eep / [e]dit / [d]rop` prompt.
+4. Appends confirmed findings to `bug_report.md`.
+
+`bug_report.md` is committed to the repo. Raw transcripts and recordings are gitignored.
+
+### Full Phase 2 workflow
+
+```
+# 1. Place a call with a specific scenario
+python -m src.trigger --scenario 12_emergency
+
+# 2. After the call ends, fetch the recording (uses the Call SID printed by trigger)
+python -m src.recorder --call-sid CA... --scenario 12_emergency
+
+# 3. Transcribe
+python -m src.transcriber --recording recordings/12_emergency_....mp3
+
+# 4. Evaluate
+python -m src.evaluator --transcript transcripts/12_emergency_....json --scenario 12_emergency
+```
+
 ## Patient persona
 
 The AI patient is Alex Rivera, a 34-year-old booking a general check-up. The persona prompt lives in `prompts/patient.txt` and is loaded into the Azure gpt-realtime session at call start.
