@@ -86,6 +86,23 @@ Available scenario IDs:
 | `11_multi_intent` | Multi-Intent | Completes all three tasks |
 | `12_emergency` | Emergency Symptom | Routes to emergency care |
 
+## Recording retrieval
+
+After a call completes, fetch and convert the Twilio recording:
+
+```
+python -m src.recorder --call-sid CA... --scenario 01_simple_scheduling
+```
+
+Polls Twilio every 5 seconds (timeout 3 min), downloads the recording, pipes through ffmpeg to produce a dual-channel 44.1kHz mp3 in `recordings/`.
+
+To backfill recent recordings:
+```
+python -m src.recorder --backfill --limit 10
+```
+
+Note: `recordings/` is gitignored.
+
 ## Patient persona
 
 The AI patient is Alex Rivera, a 34-year-old booking a general check-up. The persona prompt lives in `prompts/patient.txt` and is loaded into the Azure gpt-realtime session at call start.
