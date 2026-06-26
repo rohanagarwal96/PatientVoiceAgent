@@ -148,11 +148,22 @@ After transcribing a call, run the evaluator to find and review potential bugs:
 python -m src.evaluator --transcript transcripts/05_controlled_substance_20260625_120000_CAabc.json --scenario 05_controlled_substance
 ```
 
+Add `--dry-run` to see candidate findings without being prompted and without writing to `bug_report.md`:
+
+```
+python -m src.evaluator --transcript transcripts/... --scenario 01_simple_scheduling --dry-run
+```
+
 The evaluator:
-1. Reads the transcript and the scenario's known trap condition.
-2. Calls Azure OpenAI (deployment: `AZURE_OPENAI_EVAL_DEPLOYMENT`) for candidate findings.
-3. Presents each finding with a `[k]eep / [e]dit / [d]rop` prompt.
-4. Appends confirmed findings to `bug_report.md`.
+1. Reads the transcript JSON and the scenario's known failure mode (`trap`).
+2. Formats the transcript with correct `MM:SS` timestamps and calls Azure OpenAI (`AZURE_OPENAI_EVAL_DEPLOYMENT`) for candidate findings.
+3. Validates that each timestamp falls within the call duration — flags any that do not.
+4. Grades the scheduling agent against real-world competency, not the test script. Candidates where the agent's behavior was reasonable despite not matching the script are either suppressed or flagged as low-confidence.
+5. Flags possible state artifacts — cases where the agent may be responding to legitimate prior-call memory from this test number rather than making a mistake.
+6. Presents each finding with a `[k]eep / [e]dit / [d]rop` prompt (interactive mode only).
+7. Appends confirmed findings to `bug_report.md` with: precise title, severity + one-line justification, correct `MM:SS` timestamp, evidence quote from the transcript, structured description (what happened / why it matters / what should have happened), confidence level, and state-artifact flag.
+
+`bug_report.md` is committed to the repo. Raw recordings and transcripts are gitignored.
 
 `bug_report.md` is committed to the repo. Raw transcripts and recordings are gitignored.
 
