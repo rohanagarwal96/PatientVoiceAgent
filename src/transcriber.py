@@ -7,7 +7,7 @@ from pathlib import Path
 import whisper
 
 _TRANSCRIPTS_DIR = Path(__file__).parent.parent / "transcripts"
-_CHANNEL_LABELS = {0: "PATIENT", 1: "AGENT"}
+_CHANNEL_LABELS = {0: "AGENT", 1: "PATIENT"}
 
 
 def _split_channels(mp3_path: Path, tmp_dir: str) -> tuple[Path, Path]:
@@ -38,7 +38,7 @@ def transcribe(recording_path: Path) -> tuple[Path, Path]:
 
         segments: list[dict] = []
         for channel_idx, wav_path in enumerate((ch0, ch1)):
-            result = model.transcribe(str(wav_path), language="en")
+            result = model.transcribe(str(wav_path), language="en", condition_on_previous_text=False)
             label = _CHANNEL_LABELS[channel_idx]
             for seg in result["segments"]:
                 segments.append({

@@ -116,7 +116,7 @@ Or transcribe all untranscribed recordings:
 python -m src.transcriber --all
 ```
 
-Uses Whisper `small` model. Splits the dual-channel mp3 into two mono wav files (channel 0 = PATIENT, channel 1 = AGENT), transcribes each independently, merges segments by timestamp.
+Uses Whisper `small` model. Splits the dual-channel mp3 into two mono wav files (channel 0 = AGENT/called party, channel 1 = PATIENT/calling party), transcribes each independently, merges segments by timestamp.
 
 Output in `transcripts/`:
 - `.txt` — human-readable with `[MM:SS] SPEAKER: text` format
