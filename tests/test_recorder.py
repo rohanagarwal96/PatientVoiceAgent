@@ -33,6 +33,7 @@ def test_fetch_recording_names_file_correctly(tmp_path):
     """Output file has correct naming pattern: {scenario_id}_{ts}_{call_sid}.mp3"""
     mock_rec = MagicMock()
     mock_rec.uri = "/2010-04-01/Accounts/ACtest/Recordings/REtest.json"
+    mock_rec.status = "completed"
 
     with (
         patch("src.recorder.Client") as mock_client_class,

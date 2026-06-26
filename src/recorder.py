@@ -47,13 +47,16 @@ def fetch_recording(call_sid: str, scenario_id: str) -> Path:
     while time.time() < deadline:
         recs = client.recordings.list(call_sid=call_sid)
         if recs:
-            recording = recs[0]
-            break
-        print(f"[recorder] waiting for recording... (retry in {_POLL_INTERVAL}s)", flush=True)
+            if recs[0].status == "completed":
+                recording = recs[0]
+                break
+            print(f"[recorder] recording found (status={recs[0].status}), waiting for processing...", flush=True)
+        else:
+            print(f"[recorder] waiting for recording... (retry in {_POLL_INTERVAL}s)", flush=True)
         time.sleep(_POLL_INTERVAL)
 
     if recording is None:
-        raise TimeoutError(f"No recording found for {call_sid} after {_POLL_TIMEOUT}s")
+        raise TimeoutError(f"No completed recording found for {call_sid} after {_POLL_TIMEOUT}s")
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     _RECORDINGS_DIR.mkdir(exist_ok=True)
