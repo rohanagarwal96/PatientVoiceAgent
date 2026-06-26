@@ -142,17 +142,26 @@ The evaluator:
 
 ### Full Phase 2 workflow
 
+Run everything with one command:
+
 ```
-# 1. Place a call with a specific scenario
+python -m src.pipeline --scenario 12_emergency
+```
+
+This places the call, waits for the recording, transcribes it, and opens the human-in-the-loop evaluator.
+
+To skip the evaluator:
+
+```
+python -m src.pipeline --scenario 12_emergency --no-evaluate
+```
+
+The individual steps can still be run separately if needed:
+
+```
 python -m src.trigger --scenario 12_emergency
-
-# 2. After the call ends, fetch the recording (uses the Call SID printed by trigger)
 python -m src.recorder --call-sid CA... --scenario 12_emergency
-
-# 3. Transcribe
 python -m src.transcriber --recording recordings/12_emergency_....mp3
-
-# 4. Evaluate
 python -m src.evaluator --transcript transcripts/12_emergency_....json --scenario 12_emergency
 ```
 
