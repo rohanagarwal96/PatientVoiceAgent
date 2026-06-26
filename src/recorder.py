@@ -13,14 +13,33 @@ load_dotenv()
 
 _RECORDINGS_DIR = Path(__file__).parent.parent / "recordings"
 _POLL_INTERVAL = 5
-_POLL_TIMEOUT = 180
+_CALL_TIMEOUT = 600   # 10 min — wait for the call itself to end
+_POLL_TIMEOUT = 180   # 3 min — wait for recording to appear after call ends
+
+_TERMINAL_CALL_STATUSES = {"completed", "failed", "busy", "no-answer", "canceled"}
 
 
 def fetch_recording(call_sid: str, scenario_id: str) -> Path:
-    """Poll Twilio for recording, download, convert to dual-channel mp3."""
+    """Wait for call to complete, then poll for recording and convert to dual-channel mp3."""
     account_sid = os.getenv("TWILIO_ACCOUNT_SID")
     auth_token = os.getenv("TWILIO_AUTH_TOKEN")
     client = Client(account_sid, auth_token)
+
+    # Wait for the call to reach a terminal status before looking for a recording.
+    print(f"[recorder] waiting for call {call_sid} to complete...", flush=True)
+    deadline = time.time() + _CALL_TIMEOUT
+    while time.time() < deadline:
+        call_status = client.calls(call_sid).fetch().status
+        if call_status in _TERMINAL_CALL_STATUSES:
+            print(f"[recorder] call ended (status={call_status})", flush=True)
+            break
+        print(f"[recorder] call in progress (status={call_status}), checking in {_POLL_INTERVAL}s...", flush=True)
+        time.sleep(_POLL_INTERVAL)
+    else:
+        raise TimeoutError(f"Call {call_sid} did not complete within {_CALL_TIMEOUT}s")
+
+    if call_status != "completed":
+        raise RuntimeError(f"Call ended with non-completed status: {call_status}")
 
     recording = None
     deadline = time.time() + _POLL_TIMEOUT
