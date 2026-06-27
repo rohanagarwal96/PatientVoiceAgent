@@ -60,45 +60,60 @@ This calls +1-805-439-8008 from `TWILIO_FROM_NUMBER`, records both channels (dua
 
 ## Scenario engine
 
-Scenarios are defined in `src/scenarios.py`. Each scenario is a Pydantic `Scenario` object with `id`, `name`, `persona`, `goal`, `trap`, `opening_hint`, `system_prompt`, and `returning_patient_strategy` fields.
+All test calls come from the same Twilio number, so the test agent keys its memory to one caller: **Alex Rivera** (DOB March 12, 1991, Blue Cross Blue Shield, CVS pharmacy). A `PATIENT_PROFILE` object in `src/scenarios.py` holds these stable details. The patient system prompt is assembled at call time from the shared profile plus the current scenario's `call_reason`, `goal`, and any optional `call_context` (e.g., prescription details). Scenarios no longer carry per-call personas — they carry reasons and goals.
 
 To place a call with a specific scenario:
 ```
-python -m src.trigger --scenario 01_simple_scheduling
+python -m src.pipeline --scenario 01_simple_scheduling
 ```
 
-The scenario ID flows: `trigger.py` → `?scenario=` query param → `server.py` embeds it as a `<Parameter>` in the Twilio `<Stream>` → `bridge.py` reads it from `start.customParameters` → injects the scenario's full system prompt into the Azure gpt-realtime session.
+This is the **primary run mode**: one scenario, one call, you review before deciding what to run next.
+
+The scenario ID flows: `pipeline.py` → `trigger.py` → `?scenario=` query param → `server.py` embeds it as a `<Parameter>` in the Twilio `<Stream>` → `bridge.py` reads it from `start.customParameters` → calls `scenario.get_system_prompt()` to inject the assembled patient prompt into the Azure gpt-realtime session.
 
 ### Returning-patient handling
 
-Because all test calls come from the same caller ID, the test agent has memory of prior calls and may greet the patient by name, reference a past appointment, or ask "Is this Alex?" This is normal production behavior, not a bug in the test agent.
+Because all calls come from one number, the test agent remembers prior interactions and may greet by name or reference a prior appointment. This is production behavior, not a bug.
 
-Each scenario declares a `returning_patient_strategy` that shapes how the patient bot reacts:
+Each scenario has a `returning_patient_strategy`:
 
 | Strategy | Effect |
 |---|---|
-| `lean_into_memory` | Accept the name/history and work with it to reach the goal (default for most scenarios) |
-| `correct_the_record` | Gently push back if prior state conflicts with the goal ("I don't think I have anything booked — I'd like to schedule a new one") |
-| `ignore` | Confirm naturally and redirect immediately without dwelling on the memory |
+| `lean_into_memory` | Accept the name/history and work with it toward the goal (default) |
+| `correct_the_record` | Gently push back if prior state conflicts with the goal |
+| `ignore` | Confirm naturally and redirect without dwelling on the memory |
 
-`01_simple_scheduling` uses `correct_the_record` because the agent's memory of a prior appointment directly conflicts with the fresh-booking goal. All other scenarios default to `lean_into_memory`.
+`01_simple_scheduling` uses `correct_the_record` because a genuine new-booking attempt should not be blocked by a prior appointment in the agent's memory.
 
-`bridge.py` calls `scenario.get_system_prompt()` (not `scenario.system_prompt` directly), which appends the appropriate returning-patient guidance block to the base prompt.
+### Chained vs standalone scenarios
 
-Available scenario IDs:
+Three scenarios form an **appointment-lifecycle chain** that tests the agent's memory across calls. Run them in order:
+
+| # | Scenario | Depends on |
+|---|---|---|
+| 1 | `01_simple_scheduling` | — (run first; the only true new-patient call) |
+| 2 | `03_reschedule` | `01_simple_scheduling` |
+| 3 | `04_cancel` | `03_reschedule` |
+
+> **First-time-booking note:** A clean new-patient booking can only happen once per phone number. `01_simple_scheduling` is that call. All subsequent booking-type scenarios (`03_reschedule`, `04_cancel`, and any future booking tests) are explicitly returning-patient flows.
+
+To step through the chain with a confirmation prompt between each call:
+```
+python -m src.pipeline --chain
+```
+The chain runner pauses and waits for you to press Enter before placing each subsequent call. It never batches calls unattended. If you re-run a single chained scenario in isolation, the runner warns which earlier call established the state it depends on.
+
+The remaining nine scenarios are **standalone** and can be run in any order:
 
 | ID | Name | What it tests |
 |----|------|---------------|
-| `01_simple_scheduling` | Simple Scheduling | Collects name/DOB/insurance, offers slot |
 | `02_after_hours` | After Hours Request | Declines Sunday/9pm, offers next weekday |
-| `03_reschedule` | Reschedule | Identity lookup, no double-book |
-| `04_cancel` | Cancellation | Confirms cancellation, not just acknowledges |
 | `05_controlled_substance` | Controlled Substance Refill | Routes to provider review |
 | `06_refill_no_pharmacy` | Refill Missing Pharmacy | Handles missing pharmacy gracefully |
 | `07_unverifiable_insurance` | Unverifiable Insurance | No hallucinated coverage |
 | `08_location_hours` | Multi-Location Hours | Accurate hours, no contradictions |
 | `09_barge_in` | Interruption/Barge-in | Turn-taking under interruption |
-| `10_unclear_mind_change` | Unclear + Changes Mind | Handles mumble + mid-call change |
+| `10_unclear_mind_change` | Unclear + Changes Mind | Handles mid-call specialty change |
 | `11_multi_intent` | Multi-Intent | Completes all three tasks |
 | `12_emergency` | Emergency Symptom | Routes to emergency care |
 
